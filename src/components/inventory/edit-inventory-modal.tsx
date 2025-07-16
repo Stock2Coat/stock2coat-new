@@ -30,7 +30,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { InventoryItem } from "@/lib/types"
-import { X, Save } from "lucide-react"
+import { Save } from "lucide-react"
 
 const editInventorySchema = z.object({
   ralCode: z.string().min(1, "RAL code is verplicht"),
@@ -114,14 +114,9 @@ export function EditInventoryModal({ item, open, onClose, onSave }: EditInventor
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-2xl font-bold">
-              Inventory Item Bewerken
-            </DialogTitle>
-            <Button variant="ghost" size="sm" onClick={handleClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle className="text-2xl font-bold">
+            Inventory Item Bewerken
+          </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>

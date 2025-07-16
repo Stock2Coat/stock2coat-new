@@ -20,8 +20,7 @@ import {
   Calendar,
   ArrowUp,
   ArrowDown,
-  RotateCcw,
-  X
+  RotateCcw
 } from "lucide-react"
 
 interface InventoryDetailsProps {
@@ -65,14 +64,9 @@ export function InventoryDetails({ item, open, onClose }: InventoryDetailsProps)
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-2xl font-bold">
-              Product Details
-            </DialogTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle className="text-2xl font-bold">
+            Product Details
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">

@@ -80,8 +80,8 @@ export default function InventoryPage() {
   return (
     <RouteGuard requireAuth={true}>
       <div className="space-y-6">
-      {/* Connection status indicator */}
-      {connectionStatus !== 'connected' && (
+      {/* Connection status indicator - hidden for cleaner UI */}
+      {/* {connectionStatus !== 'connected' && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -98,7 +98,7 @@ export default function InventoryPage() {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       <InventoryTable
         data={items}
@@ -121,8 +121,8 @@ export default function InventoryPage() {
         onSave={handleSaveEdit}
       />
       
-      {/* Real-time test component for development */}
-      {process.env.NODE_ENV === 'development' && <RealtimeTest />}
+      {/* Real-time test component for development - temporarily hidden */}
+      {/* {process.env.NODE_ENV === 'development' && <RealtimeTest />} */}
       </div>
     </RouteGuard>
   )
