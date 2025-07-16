@@ -5,42 +5,6 @@ import { InventoryItem, Transaction, TransactionType } from '@/lib/types'
 type DBInventoryItem = Database['public']['Tables']['inventory_items']['Row']
 type DBTransaction = Database['public']['Tables']['transactions']['Row']
 
-// Helper function to deeply serialize objects for logging
-function deepSerialize(obj: unknown): unknown {
-  if (obj === null || typeof obj !== 'object') return obj;
-  
-  if (obj instanceof Error) {
-    return {
-      name: obj.name,
-      message: obj.message,
-      stack: obj.stack,
-      ...Object.getOwnPropertyNames(obj).reduce((acc: Record<string, unknown>, key) => {
-        acc[key] = (obj as unknown as Record<string, unknown>)[key];
-        return acc;
-      }, {})
-    };
-  }
-  
-  if (Array.isArray(obj)) {
-    return obj.map(deepSerialize);
-  }
-  
-  const result: Record<string, unknown> = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      result[key] = deepSerialize((obj as Record<string, unknown>)[key]);
-    }
-  }
-  
-  // Also include non-enumerable properties
-  Object.getOwnPropertyNames(obj).forEach(key => {
-    if (!Object.prototype.hasOwnProperty.call(result, key)) {
-      result[key] = deepSerialize((obj as Record<string, unknown>)[key]);
-    }
-  });
-  
-  return result;
-}
 
 export class InventoryService {
   private supabase = createClient()
@@ -306,10 +270,11 @@ export class InventoryService {
 
       if (error) {
         console.error('🔍 PROPER ERROR EXTRACTION:')
-        console.error('- Error message:', (error as any).message)
-        console.error('- Error details:', (error as any).details)
-        console.error('- Error hint:', (error as any).hint)
-        console.error('- Error code:', (error as any).code)
+        const errorObj = error as { message?: string; details?: string; hint?: string; code?: string }
+        console.error('- Error message:', errorObj.message)
+        console.error('- Error details:', errorObj.details)
+        console.error('- Error hint:', errorObj.hint)
+        console.error('- Error code:', errorObj.code)
         console.error('- Full error object:', error)
         console.log('🔍 DEBUGGING INFO:')
         console.log('- Function exists and was called')
@@ -318,7 +283,7 @@ export class InventoryService {
         console.log('- Most likely: insufficient stock or item not found')
         
         // Special handling for function not found error - use fallback method
-        if ((error as any).message && (error as any).message.includes('function') && (error as any).message.includes('does not exist')) {
+        if (errorObj.message && errorObj.message.includes('function') && errorObj.message.includes('does not exist')) {
           console.warn('Database function not found, using fallback method')
           console.log('📋 MANUAL DEPLOYMENT REQUIRED:')
           console.log('Go to: https://supabase.com/dashboard/project/rlgnxmygytofqmhmgfaa/sql')
@@ -328,7 +293,7 @@ export class InventoryService {
         
         // Parse and categorize database function errors using proper error extraction
         let userFriendlyError = 'Failed to process consumption'
-        const errorMessage = (error as any).message || (error as any).details || (error as any).hint || ''
+        const errorMessage = errorObj.message || errorObj.details || errorObj.hint || ''
         
         console.log('🔍 ERROR CATEGORIZATION:')
         console.log('- Raw error message:', errorMessage)
@@ -410,7 +375,7 @@ export class InventoryService {
   private async consumeItemFallback(
     itemId: string,
     quantity: number,
-    user: any,
+    user: { id: string; email?: string },
     projectOrder?: string,
     notes?: string
   ): Promise<{ success: boolean; error?: string; data?: unknown }> {

@@ -5,7 +5,6 @@ import { InventoryTable } from '@/components/inventory/inventory-table'
 import { InventoryDetails } from '@/components/inventory/inventory-details'
 import { EditInventoryModal } from '@/components/inventory/edit-inventory-modal'
 import { VerbruikModal } from '@/components/inventory/verbruik-modal'
-import { RealtimeTest } from '@/components/inventory/realtime-test'
 import { RouteGuard } from '@/components/auth/route-guard'
 import { useInventory } from '@/lib/hooks/useInventory'
 import { InventoryItem } from '@/lib/types'
@@ -17,7 +16,6 @@ export default function InventoryPage() {
     error, 
     connectionStatus,
     updateItem, 
-    addTransaction,
     consumeItem
   } = useInventory()
   

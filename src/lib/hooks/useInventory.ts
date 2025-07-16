@@ -418,7 +418,7 @@ export function useInventory(): UseInventoryReturn {
         error: userFriendlyError
       }
     }
-  }, [items])
+  }, [items, fetchItems])
 
   return {
     items,
