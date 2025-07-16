@@ -15,12 +15,13 @@ import { InventoryRow } from './inventory-row'
 
 interface InventoryTableProps {
   data: InventoryItem[]
+  loading?: boolean
   onConsume: (id: string) => void
   onEdit: (id: string) => void
   onRowClick: (id: string) => void
 }
 
-export function InventoryTable({ data, onConsume, onEdit, onRowClick }: InventoryTableProps) {
+export function InventoryTable({ data, loading = false, onConsume, onEdit, onRowClick }: InventoryTableProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<InventoryStatus | 'ALL'>('ALL')
 
@@ -36,7 +37,7 @@ export function InventoryTable({ data, onConsume, onEdit, onRowClick }: Inventor
   const displayedItems = Math.min(totalItems, 50)
 
   return (
-    <div className="bg-white rounded-lg shadow">
+    <div className="bg-white rounded-lg shadow" data-testid="inventory-table">
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
@@ -105,21 +106,32 @@ export function InventoryTable({ data, onConsume, onEdit, onRowClick }: Inventor
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredData.map((item) => (
-              <InventoryRow
-                key={item.id}
-                item={item}
-                onConsume={onConsume}
-                onEdit={onEdit}
-                onRowClick={onRowClick}
-              />
-            ))}
+            {loading ? (
+              <tr>
+                <td colSpan={7} className="px-6 py-12 text-center">
+                  <div className="text-gray-500">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p>Laden...</p>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              filteredData.map((item) => (
+                <InventoryRow
+                  key={item.id}
+                  item={item}
+                  onConsume={onConsume}
+                  onEdit={onEdit}
+                  onRowClick={onRowClick}
+                />
+              ))
+            )}
           </tbody>
         </table>
       </div>
 
       {/* Empty State */}
-      {filteredData.length === 0 && (
+      {!loading && filteredData.length === 0 && (
         <div className="px-6 py-12 text-center">
           <div className="text-gray-500">
             <Search className="h-12 w-12 mx-auto mb-4 text-gray-300" />
