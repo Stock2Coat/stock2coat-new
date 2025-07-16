@@ -5,6 +5,7 @@ import { InventoryTable } from '@/components/inventory/inventory-table'
 import { InventoryDetails } from '@/components/inventory/inventory-details'
 import { EditInventoryModal } from '@/components/inventory/edit-inventory-modal'
 import { RealtimeTest } from '@/components/inventory/realtime-test'
+import { RouteGuard } from '@/components/auth/route-guard'
 import { useInventory } from '@/lib/hooks/useInventory'
 import { InventoryItem } from '@/lib/types'
 
@@ -77,7 +78,8 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <RouteGuard requireAuth={true}>
+      <div className="space-y-6">
       {/* Connection status indicator */}
       {connectionStatus !== 'connected' && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -121,6 +123,7 @@ export default function InventoryPage() {
       
       {/* Real-time test component for development */}
       {process.env.NODE_ENV === 'development' && <RealtimeTest />}
-    </div>
+      </div>
+    </RouteGuard>
   )
 }

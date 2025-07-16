@@ -7,6 +7,12 @@ type DBTransaction = Database['public']['Tables']['transactions']['Row']
 
 export class InventoryService {
   private supabase = createClient()
+  
+  private isSupabaseConfigured() {
+    return process.env.NEXT_PUBLIC_SUPABASE_URL && 
+           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+           process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://placeholder.supabase.co'
+  }
 
   // Convert database item to app format
   private toInventoryItem(dbItem: DBInventoryItem, transactions: DBTransaction[] = []): InventoryItem {

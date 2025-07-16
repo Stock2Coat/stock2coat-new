@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -16,15 +16,17 @@ import {
   Package,
   Settings,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  LogOut
 } from 'lucide-react'
+import { useAuth } from '@/lib/contexts/auth'
 
 interface ShellProps {
   children: React.ReactNode
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: Home },
+  { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Voorraad', href: '/inventory', icon: Package },
   { name: 'Instellingen', href: '/settings', icon: Settings },
 ]
@@ -33,6 +35,18 @@ export function Shell({ children }: ShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
+  const { user, signOut } = useAuth()
+
+  const handleSignOut = async () => {
+    await signOut()
+    router.push('/login')
+  }
+
+  // Don't show shell on login page
+  if (pathname === '/login') {
+    return <>{children}</>
+  }
 
   return (
     <div className="h-screen flex">
@@ -82,6 +96,15 @@ export function Shell({ children }: ShellProps) {
                   </li>
                 )
               })}
+              <li>
+                <button
+                  onClick={handleSignOut}
+                  className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-slate-100 hover:text-white hover:bg-slate-700 transition-all"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Uitloggen
+                </button>
+              </li>
             </ul>
           </nav>
         </SheetContent>
@@ -150,6 +173,21 @@ export function Shell({ children }: ShellProps) {
                 </li>
               )
             })}
+            <li>
+              <button
+                onClick={handleSignOut}
+                className={cn(
+                  "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-slate-100 hover:text-white hover:bg-slate-700 transition-all",
+                  sidebarCollapsed && "justify-center"
+                )}
+                title={sidebarCollapsed ? "Uitloggen" : undefined}
+              >
+                <LogOut className="h-4 w-4 flex-shrink-0" />
+                {!sidebarCollapsed && (
+                  <span className="truncate">Uitloggen</span>
+                )}
+              </button>
+            </li>
           </ul>
         </nav>
 
