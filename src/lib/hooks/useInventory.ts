@@ -18,6 +18,12 @@ interface UseInventoryReturn {
     userName: string,
     orderNumber?: string
   ) => Promise<void>
+  consumeItem: (
+    itemId: string,
+    quantity: number,
+    projectOrder?: string,
+    notes?: string
+  ) => Promise<{ success: boolean; error?: string }>
   refreshItems: () => Promise<void>
 }
 
@@ -48,7 +54,11 @@ export function useInventory(): UseInventoryReturn {
 
   // Handle real-time updates
   const handleRealtimeUpdate = useCallback((payload: unknown) => {
-    console.log('Real-time update received:', payload)
+    console.log('🔄 REAL-TIME UPDATE RECEIVED!')
+    console.log('📊 Payload:', payload)
+    console.log('🔄 Action: Updating UI with database changes')
+    console.log('- Expected: Inventory stock levels will sync with database')
+    console.log('- Verification: Check if optimistic updates match real data')
     
     // Type guard to ensure payload is the expected format
     if (!payload || typeof payload !== 'object') {
@@ -243,6 +253,173 @@ export function useInventory(): UseInventoryReturn {
     }
   }, [fetchItems])
 
+  // Optimistic consumption with atomic RPC call
+  const consumeItem = useCallback(async (
+    itemId: string,
+    quantity: number,
+    projectOrder?: string,
+    notes?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      console.log('Starting optimistic consumption:', { itemId, quantity, projectOrder, notes })
+      
+      // Validate input parameters
+      if (!itemId || typeof itemId !== 'string') {
+        return { success: false, error: 'Invalid item ID' }
+      }
+      
+      if (!quantity || quantity <= 0) {
+        return { success: false, error: 'Quantity must be greater than 0' }
+      }
+      
+      // Find the item for optimistic update
+      const item = items.find(i => i.id === itemId)
+      if (!item) {
+        return { success: false, error: 'Item not found in inventory' }
+      }
+      
+      // Check if there's sufficient stock
+      if (quantity > item.currentStock) {
+        return { success: false, error: `Insufficient stock. Available: ${item.currentStock} kg, Requested: ${quantity} kg` }
+      }
+
+      // Store original state for rollback
+      const originalItem = { ...item }
+      
+      // Calculate new stock and status for optimistic update
+      const newStock = item.currentStock - quantity
+      let newStatus = item.status
+      
+      if (newStock <= 0) {
+        newStatus = 'UIT'
+      } else if (newStock <= item.minStock) {
+        newStatus = 'LAAG'
+      } else if (newStock <= (item.minStock * 2)) {
+        newStatus = 'GEM'
+      } else {
+        newStatus = 'OK'
+      }
+
+      // Optimistic UI update - immediately update the UI
+      setItems(prevItems =>
+        prevItems.map(prevItem =>
+          prevItem.id === itemId
+            ? {
+                ...prevItem,
+                currentStock: newStock,
+                status: newStatus,
+                lastUpdated: new Date().toISOString()
+              }
+            : prevItem
+        )
+      )
+
+      // Call the atomic RPC function
+      const result = await inventoryService.consumeItem(
+        itemId,
+        quantity,
+        projectOrder,
+        notes
+      )
+
+      if (result.success) {
+        console.log('✅ CONSUMPTION HOOK SUCCESS!')
+        console.log('📊 Service response:', result)
+        console.log('🔄 UI UPDATE STATUS:')
+        console.log('- Optimistic update: Already applied')
+        console.log('- Real-time subscription: Will confirm changes')
+        console.log('- Expected: Inventory table shows updated stock')
+        
+        // Log the current state for verification
+        const updatedItem = items.find(i => i.id === itemId)
+        if (updatedItem) {
+          console.log('📋 CURRENT ITEM STATE:')
+          console.log(`- Item: ${updatedItem.ralCode}`)
+          console.log(`- Current stock: ${updatedItem.currentStock} kg`)
+          console.log(`- Status: ${updatedItem.status}`)
+        }
+        
+        // Success - the real-time subscription will confirm the update
+        return { success: true }
+      } else {
+        console.error('Consumption failed:', {
+          error: result.error,
+          fullResult: JSON.stringify(result, null, 2),
+          itemId,
+          quantity
+        })
+        console.error('Consumption failed full object:', result)
+        
+        // Rollback optimistic update on failure
+        setItems(prevItems =>
+          prevItems.map(prevItem =>
+            prevItem.id === itemId ? originalItem : prevItem
+          )
+        )
+        
+        // Enhanced error handling based on error type
+        let userFriendlyError = result.error || 'Failed to register consumption'
+        
+        if (result.error?.includes('function') && result.error?.includes('does not exist')) {
+          userFriendlyError = 'Database function niet gevonden. Neem contact op met de beheerder.'
+        } else if (result.error?.includes('INSUFFICIENT_STOCK')) {
+          userFriendlyError = 'Onvoldoende voorraad beschikbaar.'
+        } else if (result.error?.includes('INVALID_QUANTITY')) {
+          userFriendlyError = 'Ongeldige hoeveelheid ingevoerd.'
+        } else if (result.error?.includes('ITEM_NOT_FOUND')) {
+          userFriendlyError = 'Artikel niet gevonden in voorraad.'
+        }
+        
+        return { 
+          success: false, 
+          error: userFriendlyError
+        }
+      }
+    } catch (err) {
+      console.error('Error in consumeItem:', {
+        error: err,
+        message: err instanceof Error ? err.message : 'Unknown error',
+        stack: err instanceof Error ? err.stack : undefined,
+        itemId,
+        quantity
+      })
+      
+      // Rollback optimistic update on error
+      const currentOriginalItem = items.find(i => i.id === itemId)
+      if (currentOriginalItem) {
+        setItems(prevItems =>
+          prevItems.map(prevItem =>
+            prevItem.id === itemId ? currentOriginalItem : prevItem
+          )
+        )
+      } else {
+        // If item not found in current state, force refresh
+        console.warn('Item not found for rollback, forcing refresh')
+        fetchItems()
+      }
+      
+      // Enhanced error handling for different error types
+      let userFriendlyError = 'Er is een onverwachte fout opgetreden'
+      
+      if (err instanceof Error) {
+        if (err.message.includes('User not authenticated')) {
+          userFriendlyError = 'U bent niet ingelogd. Ververs de pagina en probeer opnieuw.'
+        } else if (err.message.includes('network') || err.message.includes('fetch')) {
+          userFriendlyError = 'Netwerkfout. Controleer uw internetverbinding.'
+        } else if (err.message.includes('timeout')) {
+          userFriendlyError = 'Verzoek duurde te lang. Probeer het opnieuw.'
+        } else {
+          userFriendlyError = `Fout: ${err.message}`
+        }
+      }
+      
+      return { 
+        success: false, 
+        error: userFriendlyError
+      }
+    }
+  }, [items])
+
   return {
     items,
     loading,
@@ -251,6 +428,7 @@ export function useInventory(): UseInventoryReturn {
     updateItem,
     deleteItem,
     addTransaction,
+    consumeItem,
     refreshItems: fetchItems
   }
 }

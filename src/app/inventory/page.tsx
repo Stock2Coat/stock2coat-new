@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { InventoryTable } from '@/components/inventory/inventory-table'
 import { InventoryDetails } from '@/components/inventory/inventory-details'
 import { EditInventoryModal } from '@/components/inventory/edit-inventory-modal'
+import { VerbruikModal } from '@/components/inventory/verbruik-modal'
 import { RealtimeTest } from '@/components/inventory/realtime-test'
 import { RouteGuard } from '@/components/auth/route-guard'
 import { useInventory } from '@/lib/hooks/useInventory'
@@ -16,18 +17,23 @@ export default function InventoryPage() {
     error, 
     connectionStatus,
     updateItem, 
-    addTransaction 
+    addTransaction,
+    consumeItem
   } = useInventory()
   
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [editItem, setEditItem] = useState<InventoryItem | null>(null)
   const [editOpen, setEditOpen] = useState(false)
+  const [consumeItemVar, setConsumeItem] = useState<InventoryItem | null>(null)
+  const [consumeOpen, setConsumeOpen] = useState(false)
 
   const handleConsume = async (id: string) => {
-    // TODO: Add proper consume dialog
-    const quantity = 1 // This should come from a dialog
-    await addTransaction(id, 'OUT', quantity, 'Current User')
+    const item = items.find(item => item.id === id)
+    if (item) {
+      setConsumeItem(item)
+      setConsumeOpen(true)
+    }
   }
 
   const handleEdit = (id: string) => {
@@ -62,6 +68,20 @@ export default function InventoryPage() {
       setEditOpen(false)
       setEditItem(null)
     }
+  }
+
+  const handleConsumeClose = () => {
+    setConsumeOpen(false)
+    setConsumeItem(null)
+  }
+
+  const handleConsumeSubmit = async (
+    itemId: string,
+    quantity: number,
+    projectOrder?: string,
+    notes?: string
+  ) => {
+    return await consumeItem(itemId, quantity, projectOrder, notes)
   }
 
   // Show error state
@@ -119,6 +139,13 @@ export default function InventoryPage() {
         open={editOpen}
         onClose={handleEditClose}
         onSave={handleSaveEdit}
+      />
+
+      <VerbruikModal
+        item={consumeItemVar}
+        open={consumeOpen}
+        onClose={handleConsumeClose}
+        onConsume={handleConsumeSubmit}
       />
       
       {/* Real-time test component for development - temporarily hidden */}

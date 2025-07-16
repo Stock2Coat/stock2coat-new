@@ -8,7 +8,7 @@ export interface Database {
           color: string
           brand: string
           product_code: string
-          status: 'OK' | 'GEM' | 'LAAG'
+          status: 'OK' | 'GEM' | 'LAAG' | 'UIT'
           current_stock: number
           max_stock: number
           min_stock: number
@@ -27,7 +27,7 @@ export interface Database {
           color: string
           brand: string
           product_code: string
-          status: 'OK' | 'GEM' | 'LAAG'
+          status: 'OK' | 'GEM' | 'LAAG' | 'UIT'
           current_stock: number
           max_stock: number
           min_stock: number

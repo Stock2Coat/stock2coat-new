@@ -10,7 +10,8 @@ export function StatusBadge({ status }: StatusBadgeProps) {
   const variants = {
     OK: 'bg-green-100 text-green-800 hover:bg-green-100',
     GEM: 'bg-orange-100 text-orange-800 hover:bg-orange-100', 
-    LAAG: 'bg-red-100 text-red-800 hover:bg-red-100'
+    LAAG: 'bg-red-100 text-red-800 hover:bg-red-100',
+    UIT: 'bg-gray-100 text-gray-800 hover:bg-gray-100'
   }
 
   return (

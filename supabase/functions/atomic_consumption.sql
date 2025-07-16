@@ -1,0 +1,153 @@
+-- Atomic Consumption Transaction RPC Function
+-- This function handles inventory consumption in a single, atomic transaction
+-- to ensure data integrity and prevent race conditions
+
+CREATE OR REPLACE FUNCTION process_inventory_consumption(
+    p_item_id UUID,
+    p_quantity NUMERIC,
+    p_user_id UUID,
+    p_user_name TEXT,
+    p_project_order TEXT DEFAULT NULL,
+    p_notes TEXT DEFAULT NULL
+) RETURNS JSONB AS $$
+DECLARE
+    v_current_stock NUMERIC;
+    v_min_stock NUMERIC;
+    v_new_stock NUMERIC;
+    v_new_status TEXT;
+    v_item_code TEXT;
+    v_transaction_id UUID;
+    v_result JSONB;
+BEGIN
+    -- Lock the inventory item to prevent concurrent modifications
+    SELECT currentStock, minStock, ralCode
+    INTO v_current_stock, v_min_stock, v_item_code
+    FROM inventory_items
+    WHERE id = p_item_id
+    FOR UPDATE;
+    
+    -- Check if item exists
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'ITEM_NOT_FOUND',
+            'message', 'Inventory item not found'
+        );
+    END IF;
+    
+    -- Validate consumption quantity
+    IF p_quantity <= 0 THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'INVALID_QUANTITY',
+            'message', 'Consumption quantity must be greater than 0'
+        );
+    END IF;
+    
+    -- Check if sufficient stock is available
+    IF v_current_stock < p_quantity THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'INSUFFICIENT_STOCK',
+            'message', format('Insufficient stock. Available: %s kg, Requested: %s kg', v_current_stock, p_quantity),
+            'available_stock', v_current_stock,
+            'requested_quantity', p_quantity
+        );
+    END IF;
+    
+    -- Calculate new stock level
+    v_new_stock := v_current_stock - p_quantity;
+    
+    -- Determine new status based on stock level
+    IF v_new_stock <= 0 THEN
+        v_new_status := 'UIT';
+    ELSIF v_new_stock <= v_min_stock THEN
+        v_new_status := 'LAAG';
+    ELSIF v_new_stock <= (v_min_stock * 2) THEN
+        v_new_status := 'GEM';
+    ELSE
+        v_new_status := 'OK';
+    END IF;
+    
+    -- Generate transaction ID
+    v_transaction_id := gen_random_uuid();
+    
+    -- Update inventory item (atomic operation 1)
+    UPDATE inventory_items
+    SET 
+        currentStock = v_new_stock,
+        status = v_new_status,
+        lastUpdated = NOW()
+    WHERE id = p_item_id;
+    
+    -- Log the transaction (atomic operation 2)
+    INSERT INTO inventory_transactions (
+        id,
+        item_id,
+        type,
+        quantity,
+        user_id,
+        user_name,
+        project_order,
+        notes,
+        date,
+        created_at
+    ) VALUES (
+        v_transaction_id,
+        p_item_id,
+        'OUT',
+        p_quantity,
+        p_user_id,
+        p_user_name,
+        p_project_order,
+        p_notes,
+        NOW(),
+        NOW()
+    );
+    
+    -- Build success response
+    v_result := jsonb_build_object(
+        'success', true,
+        'transaction_id', v_transaction_id,
+        'item_id', p_item_id,
+        'item_code', v_item_code,
+        'previous_stock', v_current_stock,
+        'consumed_quantity', p_quantity,
+        'new_stock', v_new_stock,
+        'new_status', v_new_status,
+        'user_name', p_user_name,
+        'project_order', p_project_order,
+        'timestamp', NOW()
+    );
+    
+    RETURN v_result;
+    
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Log error and return failure response
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'TRANSACTION_FAILED',
+            'message', format('Transaction failed: %s', SQLERRM),
+            'sql_state', SQLSTATE
+        );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant execute permission to authenticated users
+GRANT EXECUTE ON FUNCTION process_inventory_consumption TO authenticated;
+
+-- Add RLS policy for the function
+CREATE POLICY "Users can execute consumption transactions"
+ON inventory_items
+FOR UPDATE
+TO authenticated
+USING (true);
+
+-- Create index for better performance on consumption queries
+CREATE INDEX IF NOT EXISTS idx_inventory_items_stock_lookup 
+ON inventory_items(id, currentStock, minStock);
+
+-- Create index for transaction history lookups
+CREATE INDEX IF NOT EXISTS idx_inventory_transactions_item_date 
+ON inventory_transactions(item_id, date DESC);

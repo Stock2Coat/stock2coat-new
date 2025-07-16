@@ -1,4 +1,4 @@
-export type InventoryStatus = 'OK' | 'GEM' | 'LAAG'
+export type InventoryStatus = 'OK' | 'GEM' | 'LAAG' | 'UIT'
 export type TransactionType = 'IN' | 'OUT' | 'ADJUSTMENT'
 
 export interface Transaction {

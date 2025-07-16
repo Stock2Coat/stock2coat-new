@@ -44,7 +44,7 @@ const editInventorySchema = z.object({
   supplier: z.string().min(1, "Leverancier is verplicht"),
   weight: z.number().min(0, "Gewicht moet positief zijn"),
   costPerUnit: z.number().min(0, "Prijs moet positief zijn"),
-  status: z.enum(['OK', 'GEM', 'LAAG']),
+  status: z.enum(['OK', 'GEM', 'LAAG', 'UIT']),
   color: z.string().min(1, "Kleur is verplicht"),
 })
 
