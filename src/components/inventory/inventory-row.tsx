@@ -27,9 +27,14 @@ export function InventoryRow({ item, onConsume, onEdit, onRowClick }: InventoryR
       {/* Brand/Product */}
       <td className="px-6 py-4">
         <div>
-          <div className="font-medium text-gray-900">{item.brand}</div>
-          <div className="text-sm text-gray-500">{item.productCode}</div>
+          <div className="font-medium text-gray-900">{item.productCode}</div>
+          <div className="text-sm text-gray-500">{item.brand}</div>
         </div>
+      </td>
+
+      {/* Afwerking */}
+      <td className="px-6 py-4">
+        <span className="text-gray-900">{item.description}</span>
       </td>
 
       {/* Status */}
@@ -51,9 +56,6 @@ export function InventoryRow({ item, onConsume, onEdit, onRowClick }: InventoryR
 
       {/* Location */}
       <td className="px-6 py-4 text-gray-900">{item.location}</td>
-
-      {/* Last Updated */}
-      <td className="px-6 py-4 text-gray-600">{item.lastUpdated}</td>
 
       {/* Actions */}
       <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
